@@ -7,7 +7,7 @@ pub mod contexts;
 
 use instructions::*;
 
-declare_id!("EsCRoW11111111111111111111111111111111111111");
+declare_id!("");
 
 #[program]
 pub mod conditional_escrow {
