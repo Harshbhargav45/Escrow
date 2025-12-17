@@ -1,158 +1,204 @@
-const anchor = require("@coral-xyz/anchor");
-const {
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import BN from "bn.js";
+import {
   TOKEN_PROGRAM_ID,
   createMint,
   getOrCreateAssociatedTokenAccount,
   mintTo,
+  createApproveInstruction,
   getAccount,
-} = require("@solana/spl-token");
+} from "@solana/spl-token";
+import { assert } from "chai";
 
-const { SystemProgram, LAMPORTS_PER_SOL } = anchor.web3;
+describe("conditional_escrow (classic)", () => {
+  const connection = new anchor.web3.Connection(
+    "https://api.devnet.solana.com",
+    {
+      commitment: "confirmed",
+      confirmTransactionInitialTimeout: 120_000,
+    }
+  );
 
-describe("conditional_escrow", () => {
-  const provider = anchor.AnchorProvider.local();
+  const provider = new anchor.AnchorProvider(
+    connection,
+    anchor.Wallet.local(),
+    { commitment: "confirmed" }
+  );
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.ConditionalEscrow;
+  const program = anchor.workspace.ConditionalEscrow as Program<any>;
+  const wallet = provider.wallet as anchor.Wallet;
 
-  let mint = null;
-  let initializer = provider.wallet;
-  let beneficiary = anchor.web3.Keypair.generate();
+  let mint: anchor.web3.PublicKey | undefined;
+  let initializerTokenAccount: any;
+  let beneficiaryTokenAccount: any;
 
-  let initializerTokenAccount = null;
-  let beneficiaryTokenAccount = null;
+  const beneficiary = anchor.web3.Keypair.generate();
 
-  let escrowPda = null;
-  let vaultAuthorityPda = null;
-  let vaultTokenAccount = null;
+  let escrowPda: anchor.web3.PublicKey | undefined;
+  let vaultAuthorityPda: anchor.web3.PublicKey | undefined;
+  let vaultTokenAccount = anchor.web3.Keypair.generate();
 
-  const amount = 100;
+  const AMOUNT = 100;
 
-  it("Airdrop SOL to beneficiary", async () => {
-    const sig = await provider.connection.requestAirdrop(
-      beneficiary.publicKey,
-      2 * LAMPORTS_PER_SOL
-    );
-    await provider.connection.confirmTransaction(sig);
+  it("Create mint and token accounts", async function () {
+    this.timeout(60_000);
+
+    try {
+      mint = await createMint(
+        connection,
+        wallet.payer,
+        wallet.publicKey,
+        null,
+        0
+      );
+
+      initializerTokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        wallet.payer,
+        mint,
+        wallet.publicKey
+      );
+
+      beneficiaryTokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        wallet.payer,
+        mint,
+        beneficiary.publicKey
+      );
+
+      await mintTo(
+        connection,
+        wallet.payer,
+        mint,
+        initializerTokenAccount.address,
+        wallet.publicKey,
+        AMOUNT
+      );
+
+      const acc = await getAccount(connection, initializerTokenAccount.address);
+      assert.equal(Number(acc.amount), AMOUNT);
+    } catch (e) {
+      console.error("Mint setup failed:", e);
+      throw e;
+    }
+
+    
+    if (!mint || !initializerTokenAccount || !beneficiaryTokenAccount) {
+      throw new Error("Mint setup incomplete — aborting tests");
+    }
   });
 
-  it("Create mint + token accounts", async () => {
-    mint = await createMint(
-      provider.connection,
-      initializer.payer,
-      initializer.publicKey,
-      null,
-      0 // decimals
-    );
+  it("Initialize escrow", async function () {
+    this.timeout(60_000);
 
-    initializerTokenAccount = await getOrCreateAssociatedTokenAccount(
-      provider.connection,
-      initializer.payer,
-      mint,
-      initializer.publicKey
-    );
+    e
+    if (!mint) throw new Error("Mint not initialized");
+    if (!initializerTokenAccount) throw new Error("Initializer ATA missing");
 
-    beneficiaryTokenAccount = await getOrCreateAssociatedTokenAccount(
-      provider.connection,
-      initializer.payer,
-      mint,
-      beneficiary.publicKey
-    );
-
-    // Mint tokens to initializer
-    await mintTo(
-      provider.connection,
-      initializer.payer,
-      mint,
-      initializerTokenAccount.address,
-      initializer.publicKey,
-      amount
-    );
-
-    const accInfo = await getAccount(provider.connection, initializerTokenAccount.address);
-    console.log("Initializer token balance:", accInfo.amount);
-  });
-
-  it("Initialize escrow", async () => {
-    const [vaultAuth] = anchor.web3.PublicKey.findProgramAddressSync(
+    [vaultAuthorityPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("vault_authority"),
-        initializer.publicKey.toBuffer(),
-        mint.toBuffer()
+        wallet.publicKey.toBuffer(),
+        mint.toBuffer(),
       ],
       program.programId
     );
 
-    vaultAuthorityPda = vaultAuth;
-
-    const [escrowAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+    [escrowPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("escrow"),
-        initializer.publicKey.toBuffer(),
-        mint.toBuffer()
+        wallet.publicKey.toBuffer(),
+        mint.toBuffer(),
       ],
       program.programId
     );
 
-    escrowPda = escrowAccount;
+    const approveIx = createApproveInstruction(
+      initializerTokenAccount.address,
+      vaultAuthorityPda,
+      wallet.publicKey,
+      AMOUNT
+    );
 
-    // Derive vault token account PDA
-    vaultTokenAccount = anchor.web3.Keypair.generate();
+    await provider.sendAndConfirm(
+      new anchor.web3.Transaction().add(approveIx)
+    );
 
-    const releaseTime = Math.floor(Date.now() / 1000) + 2; // release after 2 seconds
+    const releaseTime = Math.floor(Date.now() / 1000) + 3;
 
     await program.methods
-      .initializeEscrow(new anchor.BN(amount), new anchor.BN(releaseTime))
+      .initializeEscrow(new BN(AMOUNT), new BN(releaseTime))
       .accounts({
-        initializer: initializer.publicKey,
+        initializer: wallet.publicKey,
         beneficiary: beneficiary.publicKey,
         initializerDepositTokenAccount: initializerTokenAccount.address,
         vaultAccount: vaultTokenAccount.publicKey,
         vaultAuthority: vaultAuthorityPda,
         escrow: escrowPda,
-        mint: mint,
+        mint,
         tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([vaultTokenAccount])
       .rpc();
 
-    console.log("Escrow initialized:", escrowPda.toBase58());
+    const escrow = await program.account.escrow.fetch(escrowPda);
+    assert.equal(Number(escrow.amount), AMOUNT);
+  });
+
+  it("Fail to release before time", async () => {
+    try {
+      await program.methods
+        .releaseEscrow()
+        .accounts({
+          beneficiary: beneficiary.publicKey,
+          beneficiaryReceiveTokenAccount: beneficiaryTokenAccount.address,
+          escrow: escrowPda,
+          initializer: wallet.publicKey,
+          vaultAccount: vaultTokenAccount.publicKey,
+          vaultAuthority: vaultAuthorityPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([beneficiary])
+        .rpc();
+
+      assert.fail("Should fail");
+    } catch {
+      assert.ok(true);
+    }
   });
 
   it("Wait for release time", async () => {
-    console.log("Waiting for 3 seconds...");
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((r) => setTimeout(r, 4000));
   });
 
-  it("Release escrow", async () => {
+  it("Release escrow successfully", async function () {
+    this.timeout(60_000);
+
     await program.methods
       .releaseEscrow()
       .accounts({
         beneficiary: beneficiary.publicKey,
         beneficiaryReceiveTokenAccount: beneficiaryTokenAccount.address,
         escrow: escrowPda,
-        initializer: initializer.publicKey,
+        initializer: wallet.publicKey,
         vaultAccount: vaultTokenAccount.publicKey,
         vaultAuthority: vaultAuthorityPda,
         tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([beneficiary])
       .rpc();
 
-    console.log("Escrow released!");
-  });
-
-  it("Check token balance", async () => {
     const beneficiaryAcc = await getAccount(
-      provider.connection,
+      connection,
       beneficiaryTokenAccount.address
     );
 
-    console.log("Beneficiary final token balance:", beneficiaryAcc.amount);
-
-    if (Number(beneficiaryAcc.amount) !== amount) {
-      throw new Error("Tokens not transferred properly!");
-    }
+    assert.equal(Number(beneficiaryAcc.amount), AMOUNT);
   });
 });

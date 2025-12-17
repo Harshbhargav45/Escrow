@@ -8,7 +8,7 @@ pub struct InitializeEscrow<'info> {
     #[account(mut)]
     pub initializer: Signer<'info>,
 
-    /// CHECK
+    
     pub beneficiary: UncheckedAccount<'info>,
 
     #[account(
@@ -26,7 +26,7 @@ pub struct InitializeEscrow<'info> {
     )]
     pub vault_account: Account<'info, TokenAccount>,
 
-    /// CHECK
+    
     #[account(
         seeds = [b"vault_authority", initializer.key().as_ref(), mint.key().as_ref()],
         bump,
@@ -46,4 +46,5 @@ pub struct InitializeEscrow<'info> {
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-}
+    
+} 

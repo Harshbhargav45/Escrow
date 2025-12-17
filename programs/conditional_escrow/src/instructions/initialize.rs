@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Transfer, Token};
 
 use crate::{
-    contexts::InitializeEscrow,
+    ix_contexts::InitializeEscrow,
     state::Escrow,
 };
 
@@ -19,8 +19,9 @@ pub fn handler(
     escrow.vault = ctx.accounts.vault_account.key();
     escrow.amount = amount;
     escrow.release_time = release_time;
-    escrow.vault_bump = *ctx.bumps.get("vault_authority").unwrap();
-    escrow.escrow_bump = *ctx.bumps.get("escrow").unwrap();
+   escrow.vault_bump  = ctx.bumps.vault_authority;
+    escrow.escrow_bump = ctx.bumps.escrow;
+
 
     let accounts = Transfer {
         from: ctx

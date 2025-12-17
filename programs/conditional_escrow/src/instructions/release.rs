@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Transfer, CloseAccount, Token};
 
 use crate::{
-    contexts::ReleaseEscrow,
+    ix_contexts::ReleaseEscrow,
     errors::EscrowError,
     state::Escrow,
 };

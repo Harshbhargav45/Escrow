@@ -26,7 +26,7 @@ pub struct CancelEscrow<'info> {
     #[account(mut)]
     pub vault_account: Account<'info, TokenAccount>,
 
-    /// CHECK
+    
     #[account(
         seeds = [b"vault_authority", escrow.initializer.as_ref(), escrow.mint.as_ref()],
         bump = escrow.vault_bump,
