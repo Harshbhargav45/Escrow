@@ -133,16 +133,6 @@ anchor test
 
 ---
 
-## 🧩 Learning Outcomes
-
-By building and using this project, you learn:
-* **PDA Management**: How to programmatically own assets.
-* **CPI (Cross-Program Invocations)**: How to call the Token Program from your code.
-* **Anchor Constraints**: How to secure accounts (`mut`, `seeds`, `token::authority`).
-* **Escrow Patterns**: The fundamental building block of DeFi.
-
----
-
 ## 🚧 Future Improvements
 * 🔐 **Admin Control:** Add an admin key that can freeze or recover funds in emergencies.
 * 🌐 **Frontend:** Connect a React UI using Solana Wallet Adapter.
