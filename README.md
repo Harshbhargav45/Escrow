@@ -73,3 +73,80 @@ graph TD
     Program -- Signs via PDA --> VaultATA
     VaultATA -- Transfers Tokens --> User
     end
+```
+
+---
+
+## 🔁 How It Works
+
+### 1️⃣ Initialize
+* The program derives the **Vault PDA**.
+* It initializes a new **Vault Token Account** owned by that PDA.
+
+### 2️⃣ Deposit
+* The user calls the `deposit` instruction.
+* Tokens are transferred from `User Token Account` → `Vault Token Account`.
+* *Result:* Funds are now locked in escrow.
+
+### 3️⃣ Withdraw
+* The program verifies the withdrawal conditions are met.
+* The Program "signs" the transaction using the PDA seeds.
+* Tokens are transferred from `Vault Token Account` → `User Token Account`.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Solana Blockchain**
+* **Anchor Framework** (v0.32+)
+* **Rust** (Smart Contract Logic)
+* **TypeScript** (Tests & Client)
+* **@solana/web3.js**
+* **@solana/spl-token**
+
+---
+
+## 📁 Project 
+
+---
+
+## 🧪 Testing
+
+The project includes a robust TypeScript test suite executed via Anchor.
+
+### Test Coverage
+1.  **PDA Derivation:** Ensures the Vault address is generated correctly.
+2.  **Minting:** Creates a fresh SPL Token Mint for testing.
+3.  **Deposit:** Verifies tokens actually leave the user wallet and enter the vault.
+4.  **Balance Checks:** Logs and asserts token balances on-chain.
+
+### Run Tests
+
+```anchor test
+> ⚠️ **Note:** Ensure your local validator is running or configured correctly in `Anchor.toml`.
+
+---
+
+## 🔒 Security Notes
+
+* **No Private Keys:** The vault is owned by a PDA. No human possesses a private key that can move these funds.
+* **Program Enforcement:** Withdrawals require a specific instruction signed by the program.
+* **Anti-Spoofing:** We use canonical bumps and seed constraints to prevent fake accounts from being used.
+
+---
+
+## 🧩 Learning Outcomes
+
+By building and using this project, you learn:
+* **PDA Management**: How to programmatically own assets.
+* **CPI (Cross-Program Invocations)**: How to call the Token Program from your code.
+* **Anchor Constraints**: How to secure accounts (`mut`, `seeds`, `token::authority`).
+* **Escrow Patterns**: The fundamental building block of DeFi.
+
+---
+
+## 🚧 Future Improvements
+* 🔐 **Admin Control:** Add an admin key that can freeze or recover funds in emergencies.
+* 🌐 **Frontend:** Connect a React UI using Solana Wallet Adapter.
+
+---
