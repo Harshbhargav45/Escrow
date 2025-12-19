@@ -55,10 +55,10 @@ We use a deterministic seed pattern to ensure safety:
 
 ```mermaid
 graph TD
-    User[👤 User]
-    Program[⚙️ Escrow Program]
-    VaultPDA[🔐 Vault PDA (Authority)]
-    VaultATA[💰 Vault Token Account]
+    User["👤 User"]
+    Program["⚙️ Escrow Program"]
+    VaultPDA["🔐 Vault PDA (Authority)"]
+    VaultATA["💰 Vault Token Account"]
     
     subgraph Initialization
     Program -- Derives --> VaultPDA
@@ -106,10 +106,6 @@ graph TD
 
 ---
 
-## 📁 Project 
-
----
-
 ## 🧪 Testing
 
 The project includes a robust TypeScript test suite executed via Anchor.
@@ -122,7 +118,9 @@ The project includes a robust TypeScript test suite executed via Anchor.
 
 ### Run Tests
 
-```anchor test
+```bash
+anchor test
+```
 > ⚠️ **Note:** Ensure your local validator is running or configured correctly in `Anchor.toml`.
 
 ---
@@ -150,3 +148,5 @@ By building and using this project, you learn:
 * 🌐 **Frontend:** Connect a React UI using Solana Wallet Adapter.
 
 ---
+
+
